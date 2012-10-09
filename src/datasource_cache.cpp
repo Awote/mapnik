@@ -151,20 +151,20 @@ void datasource_cache::register_datasources(std::string const& str)
         {
 
 #if (BOOST_FILESYSTEM_VERSION == 3)
-            if (!is_directory( *itr )  && is_input_plugin(itr->path().filename().string()))
+            if (boost::filesystem::is_regular(*itr)  && is_input_plugin(itr->path().filename().string()))
 #else // v2
-                if (!is_directory( *itr )  && is_input_plugin(itr->path().leaf()))
+            if (!is_directory( *itr )  && is_input_plugin(itr->path().leaf()))
+#endif
+            {
+#if (BOOST_FILESYSTEM_VERSION == 3)
+                if (register_datasource(itr->path().string().c_str()))
+#else // v2
+                if (register_datasource(itr->string().c_str()))
 #endif
                 {
-#if (BOOST_FILESYSTEM_VERSION == 3)
-                    if (register_datasource(itr->path().string().c_str()))
-#else // v2
-                    if (register_datasource(itr->string().c_str()))
-#endif
-                    {
-                        registered_ = true;
-                    }
+                    registered_ = true;
                 }
+            }
         }
     }
 }
