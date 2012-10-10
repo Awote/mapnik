@@ -39,7 +39,7 @@
 #include <boost/make_shared.hpp>
 #include <boost/algorithm/string.hpp>
 #include <boost/filesystem/operations.hpp>
-
+#include <boost/algorithm/string/trim.hpp>
 // sqlite
 extern "C" {
 #include <sqlite3.h>
@@ -118,9 +118,15 @@ public:
     {
         std::ostringstream spatial_sql;
         spatial_sql << std::setprecision(16);
-        spatial_sql << key_field << " IN (SELECT pkid FROM " << index_table;
-        spatial_sql << " WHERE xmax>=" << e.minx() << " AND xmin<=" << e.maxx() ;
-        spatial_sql << " AND ymax>=" << e.miny() << " AND ymin<=" << e.maxy() << ")";
+        boost::algorithm::trim_if(query,boost::algorithm::is_any_of("()"));
+        spatial_sql << index_table;
+        spatial_sql << " WHERE " <<  key_field << "=pkid AND xmax>=" << e.minx() << " AND xmin<=" << e.maxx() ;
+        spatial_sql << " AND ymax>=" << e.miny() << " AND ymin<=" << e.maxy();
+
+        query = "(" + query +"," +  spatial_sql.str() + ")";
+        return true;
+
+        /*
         if (boost::algorithm::ifind_first(query,  intersects_token))
         {
             boost::algorithm::ireplace_all(query, intersects_token, spatial_sql.str());
@@ -141,6 +147,7 @@ public:
             query = table + " WHERE " + spatial_sql.str();
             return true;
         }
+        */
         return false;
     }
 
