@@ -31,6 +31,7 @@
 // boost
 #include <boost/utility.hpp>
 #include <boost/format.hpp>
+#include <boost/interprocess/streams/bufferstream.hpp>
 
 namespace mapnik
 {
@@ -460,6 +461,72 @@ bool geometry_utils::from_wkb(boost::ptr_vector<geometry_type>& paths,
     if (paths.size() > geom_count)
         return true;
     return false;
+}
+
+
+// mapnik WKB
+
+struct mapnik_wkb_reader : boost::noncopyable
+{
+    enum wkbByteOrder {
+        wkbXDR=0,
+        wkbNDR=1
+    };
+
+    mapnik_wkb_reader(char const* wkb, unsigned size)
+        : wkb_(wkb),
+          size_(size)
+    {}
+
+    template <typename Paths>
+    bool read(Paths & paths)
+    {
+        char byte_order;
+        int type;
+        int num_geometries;
+        int num_vertices;
+        double x,y;
+        int cmd = 0;
+
+        std::memcpy(&byte_order,wkb_, 1);
+        std::memcpy(&num_geometries,wkb_ + 1, 4);
+        std::vector<std::size_t> geom_sizes;
+        for (int i = 0; i < num_geometries ; ++i)
+        {
+            std::memcpy(&num_vertices,wkb_ + 1 + 4 + 4*i, 4);
+            geom_sizes.push_back(num_vertices);
+        }
+        std::size_t pos = 1 + 4 + 4*num_geometries;
+
+        for (int j = 0; j < num_geometries ; ++j)
+        {
+            std::memcpy(&type,wkb_ + pos, 1);
+            ++pos;
+            std::auto_ptr<geometry_type> path(new geometry_type((eGeomType)type));
+            for (int i=0; i<geom_sizes[j];++i)
+            {
+                std::memcpy(&cmd,wkb_ + pos,1);
+                std::memcpy(&x,  wkb_ + pos + 1,8);
+                std::memcpy(&y,wkb_   + pos + 9,8);
+                path->push_vertex(x, y, (CommandType) cmd);
+                pos += 17;
+            }
+            paths.push_back(path);
+        }
+        return true;
+    }
+
+private:
+    char const* wkb_;
+    unsigned size_;
+};
+
+bool geometry_utils::from_mapnik_wkb(boost::ptr_vector<geometry_type>& paths,
+                                     char const* wkb,
+                                     unsigned size)
+{
+    mapnik_wkb_reader reader(wkb, size);
+    return reader.read(paths);
 }
 
 }
