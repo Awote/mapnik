@@ -109,6 +109,7 @@ PLUGINS = { # plugins with external dependencies
             'geojson': {'default':True,'path':None,'inc':None,'lib':None,'lang':'C++'},
             'kismet':  {'default':False,'path':None,'inc':None,'lib':None,'lang':'C++'},
             'python':  {'default':True,'path':None,'inc':None,'lib':None,'lang':'C++'},
+            'mapniklite': {'default':True,'path':None,'inc':None,'lib':None,'lang':'C++'},
             }
 
 
