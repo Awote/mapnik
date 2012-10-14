@@ -479,13 +479,13 @@ struct mapnik_wkb_reader : boost::noncopyable
     {}
 
     template <typename Paths>
-    bool read(Paths & paths)
+    bool read(Paths & paths, double tolerance)
     {
         char byte_order;
         int type;
         int num_geometries;
         int num_vertices;
-        double x,y;
+        double x,y, weight;
         int cmd = 0;
 
         std::memcpy(&byte_order,wkb_, 1);
@@ -505,11 +505,15 @@ struct mapnik_wkb_reader : boost::noncopyable
             std::auto_ptr<geometry_type> path(new geometry_type((eGeomType)type));
             for (int i=0; i<geom_sizes[j];++i)
             {
-                std::memcpy(&cmd,wkb_ + pos,1);
-                std::memcpy(&x,  wkb_ + pos + 1,8);
-                std::memcpy(&y,wkb_   + pos + 9,8);
-                path->push_vertex(x, y, (CommandType) cmd);
-                pos += 17;
+                std::memcpy(&cmd,    wkb_ + pos,1);
+                std::memcpy(&x,      wkb_ + pos + 1, 8);
+                std::memcpy(&y,      wkb_ + pos + 9, 8);
+                std::memcpy(&weight, wkb_ + pos + 17,8);
+                if (weight >= tolerance)
+                {
+                    path->push_vertex(x, y, (CommandType) cmd);
+                }
+                pos += 25;
             }
             paths.push_back(path);
         }
@@ -523,10 +527,10 @@ private:
 
 bool geometry_utils::from_mapnik_wkb(boost::ptr_vector<geometry_type>& paths,
                                      char const* wkb,
-                                     unsigned size)
+                                     unsigned size, double tolerance)
 {
     mapnik_wkb_reader reader(wkb, size);
-    return reader.read(paths);
+    return reader.read(paths,tolerance);
 }
 
 }

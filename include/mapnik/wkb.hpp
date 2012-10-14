@@ -59,9 +59,13 @@ public:
                           unsigned size,
                           wkbFormat format = wkbGeneric);
 
+    //static bool from_mapnik_wkb(boost::ptr_vector<geometry_type>& paths,
+    //                            const char* mapnik_wkb,
+    //                            unsigned size);
+
     static bool from_mapnik_wkb(boost::ptr_vector<geometry_type>& paths,
                                 const char* mapnik_wkb,
-                                unsigned size);
+                                unsigned size, double tolerance = 0.0);
 };
 }
 

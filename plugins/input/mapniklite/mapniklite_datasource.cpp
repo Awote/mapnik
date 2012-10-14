@@ -138,10 +138,10 @@ void mapniklite_datasource::bind() const
     dataset_ = boost::make_shared<sqlite_connection>(dataset_name_);
 
     // load mapnik ext
-    if (!dataset_->load_extension("/Users/artem/Projects/simplifier/bin/clang-darwin-4.2.1/release/libmapnik_sqlext.dylib"))
-    {
-        throw datasource_exception("Mapniklite Plugin: failed to load extension");
-    }
+    //if (!dataset_->load_extension("/Users/artem/Projects/simplifier/bin/clang-darwin-4.2.1/release/libmapnik_sqlext.dylib"))
+    //{
+    //    throw datasource_exception("Mapniklite Plugin: failed to load extension");
+    //}
     boost::optional<unsigned> table_by_index = params_.get<unsigned>("table_by_index");
 
     int passed_parameters = 0;
