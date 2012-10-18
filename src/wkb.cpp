@@ -481,12 +481,10 @@ struct mapnik_wkb_reader : boost::noncopyable
     template <typename Paths>
     bool read(Paths & paths, double tolerance)
     {
-        char byte_order;
-        int type;
+        char byte_order, type, cmd;
         int num_geometries;
         int num_vertices;
         double x,y, weight;
-        int cmd = 0;
 
         std::memcpy(&byte_order,wkb_, 1);
         std::memcpy(&num_geometries,wkb_ + 1, 4);
