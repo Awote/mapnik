@@ -8,6 +8,12 @@ For a complete change history, see the git log.
 
 ## Future
 
+- Added alternative PNG/ZLIB implementation (`miniz`) that can be enabled with `e=miniz` (#1554)
+
+- Added support for setting zlib `Z_FIXED` strategy with format string: `png:z=fixed`
+
+- Fixed handling of transparency level option in Octree-based PNG encoding (#1556)
+
 - Faster rendering of rasters by reducing memory allocation of temporary buffers (#1516)
 
 - Added ability to pass a pre-created collision detector to the cairo renderer (#1444)

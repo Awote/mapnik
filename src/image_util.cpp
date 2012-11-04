@@ -29,6 +29,7 @@ extern "C"
 #include <mapnik/image_util.hpp>
 #include <mapnik/png_io.hpp>
 #include <mapnik/tiff_io.hpp>
+#include <mapnik/image_data.hpp>
 #include <mapnik/graphics.hpp>
 #include <mapnik/memory.hpp>
 #include <mapnik/image_view.hpp>
@@ -111,7 +112,8 @@ void handle_png_options(std::string const& type,
                         int * strategy,
                         int * trans_mode,
                         double * gamma,
-                        bool * use_octree)
+                        bool * use_octree,
+                        bool * use_miniz)
 {
     if (type == "png" || type == "png24" || type == "png32")
     {
@@ -137,6 +139,10 @@ void handle_png_options(std::string const& type,
             else if (t == "m=o")
             {
                 *use_octree = true;
+            }
+            else if (t == "e=miniz")
+            {
+                *use_miniz = true;
             }
             else if (boost::algorithm::starts_with(t, "c="))
             {
@@ -173,9 +179,9 @@ void handle_png_options(std::string const& type,
                 */
                 if (!mapnik::util::string2int(t.substr(2),*compression)
                     || *compression < Z_DEFAULT_COMPRESSION
-                    || *compression > Z_BEST_COMPRESSION)
+                    || *compression > 10) // use 10 here rather than Z_BEST_COMPRESSION (9) to allow for MZ_UBER_COMPRESSION
                 {
-                    throw ImageWriterException("invalid compression parameter: " + t.substr(2) + " (only -1 through 9 are valid)");
+                    throw ImageWriterException("invalid compression parameter: " + t.substr(2) + " (only -1 through 10 are valid)");
                 }
             }
             else if (boost::algorithm::starts_with(t, "s="))
@@ -197,11 +203,19 @@ void handle_png_options(std::string const& type,
                 {
                     *strategy = Z_RLE;
                 }
+                else if (s == "fixed")
+                {
+                    *strategy = Z_FIXED;
+                }
                 else
                 {
                     throw ImageWriterException("invalid compression strategy parameter: " + s);
                 }
             }
+        }
+        if ((*use_miniz == false) && *compression > Z_BEST_COMPRESSION)
+        {
+            throw ImageWriterException("invalid compression value: (only -1 through 9 are valid)");
         }
     }
 }
@@ -224,6 +238,7 @@ void save_to_stream(T const& image,
             int trans_mode = -1;
             double gamma = -1;
             bool use_octree = true;
+            bool use_miniz = false;
 
             handle_png_options(t,
                                &colors,
@@ -231,16 +246,25 @@ void save_to_stream(T const& image,
                                &strategy,
                                &trans_mode,
                                &gamma,
-                               &use_octree);
+                               &use_octree,
+                               &use_miniz);
 
             if (palette.valid())
-                save_as_png8_pal(stream, image, palette, compression, strategy);
+            {
+                save_as_png8_pal(stream, image, palette, compression, strategy, use_miniz);
+            }
             else if (colors < 0)
-                save_as_png(stream, image, compression, strategy);
+            {
+                save_as_png(stream, image, compression, strategy, use_miniz);
+            }
             else if (use_octree)
-                save_as_png8_oct(stream, image, colors, compression, strategy);
+            {
+                save_as_png8_oct(stream, image, colors, compression, strategy, trans_mode, use_miniz);
+            }
             else
-                save_as_png8_hex(stream, image, colors, compression, strategy, trans_mode, gamma);
+            {
+                save_as_png8_hex(stream, image, colors, compression, strategy, trans_mode, gamma, use_miniz);
+            }
         }
         else if (boost::algorithm::starts_with(t, "tif"))
         {
@@ -275,6 +299,7 @@ void save_to_stream(T const& image,
             int trans_mode = -1;
             double gamma = -1;
             bool use_octree = true;
+            bool use_miniz = false;
 
             handle_png_options(t,
                                &colors,
@@ -282,14 +307,21 @@ void save_to_stream(T const& image,
                                &strategy,
                                &trans_mode,
                                &gamma,
-                               &use_octree);
+                               &use_octree,
+                               &use_miniz);
 
             if (colors < 0)
-                save_as_png(stream, image, compression, strategy);
+            {
+                save_as_png(stream, image, compression, strategy, use_miniz);
+            }
             else if (use_octree)
-                save_as_png8_oct(stream, image, colors, compression, strategy);
+            {
+                save_as_png8_oct(stream, image, colors, compression, strategy, trans_mode, use_miniz);
+            }
             else
-                save_as_png8_hex(stream, image, colors, compression, strategy, trans_mode, gamma);
+            {
+                save_as_png8_hex(stream, image, colors, compression, strategy, trans_mode, gamma, use_miniz);
+            }
         }
         else if (boost::algorithm::starts_with(t, "tif"))
         {
