@@ -157,7 +157,7 @@ void pgsql2sqlite(Connection conn,
         if (geom_col == cursor->getFieldName(pos))
         {
             geometry_oid = oid;
-            create_sql << "'" << cursor->getFieldName(pos) << "' BLOB";
+            create_sql << "'" << geom_col << "' BLOB";
         }
         else
         {
