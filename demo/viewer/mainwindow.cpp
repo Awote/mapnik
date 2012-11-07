@@ -198,7 +198,7 @@ void MainWindow::load_map_file(QString const& filename)
     }
     layerTab_->setModel(new LayerListModel(map,this));
     styleTab_->setModel(new StyleModel(map,this));
-    zoom_all();
+    //zoom_all();
 }
 
 void MainWindow::zoom_to_box()
