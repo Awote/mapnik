@@ -1,3 +1,4 @@
+
 /*****************************************************************************
  *
  * This file is part of Mapnik (c++ mapping toolkit)
@@ -21,10 +22,10 @@
  *****************************************************************************/
 
 // mapnik
+#include <mapnik/feature.hpp>
 #include <mapnik/grid/grid_rasterizer.hpp>
 #include <mapnik/grid/grid_renderer.hpp>
-#include <mapnik/grid/grid_pixfmt.hpp>
-#include <mapnik/grid/grid_pixel.hpp>
+#include <mapnik/grid/grid_renderer_base.hpp>
 #include <mapnik/grid/grid.hpp>
 #include <mapnik/symbolizer_helpers.hpp>
 

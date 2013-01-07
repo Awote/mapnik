@@ -26,8 +26,10 @@
 #include <mapnik/agg_helpers.hpp>
 #include <mapnik/graphics.hpp>
 
+#include <mapnik/rule.hpp>
 #include <mapnik/debug.hpp>
 #include <mapnik/layer.hpp>
+#include <mapnik/label_collision_detector.hpp>
 #include <mapnik/feature_type_style.hpp>
 #include <mapnik/marker.hpp>
 #include <mapnik/marker_cache.hpp>
@@ -185,11 +187,7 @@ void agg_renderer<T>::start_layer_processing(layer const& lay, box2d<double> con
     if (buffer_size != 0 )
     {
         double padding = buffer_size * (double)(query_extent.width()/pixmap_.width());
-        double x0 = query_extent_.minx();
-        double y0 = query_extent_.miny();
-        double x1 = query_extent_.maxx();
-        double y1 = query_extent_.maxy();
-        query_extent_.init(x0 - padding, y0 - padding, x1 + padding , y1 + padding);
+        query_extent_.pad(padding);
     }
 
     boost::optional<box2d<double> > const& maximum_extent = lay.maximum_extent();
@@ -272,8 +270,11 @@ void agg_renderer<T>::end_style_processing(feature_type_style const& st)
 }
 
 template <typename T>
-void agg_renderer<T>::render_marker(pixel_position const& pos, marker const& marker, agg::trans_affine const& tr,
-                                    double opacity, composite_mode_e comp_op)
+void agg_renderer<T>::render_marker(pixel_position const& pos,
+                                    marker const& marker,
+                                    agg::trans_affine const& tr,
+                                    double opacity,
+                                    composite_mode_e comp_op)
 {
     typedef agg::rgba8 color_type;
     typedef agg::order_rgba order_type;
@@ -367,7 +368,7 @@ void agg_renderer<T>::render_marker(pixel_position const& pos, marker const& mar
                                              src.width(),
                                              src.height(),
                                              src.width()*4);
-            agg::pixfmt_rgba32_pre pixf(marker_buf);
+            agg::pixfmt_rgba32_pre marker_pixf(marker_buf);
             typedef agg::image_accessor_clone<agg::pixfmt_rgba32_pre> img_accessor_type;
             typedef agg::span_interpolator_linear<agg::trans_affine> interpolator_type;
             typedef agg::span_image_filter_rgba_2x2<img_accessor_type,
@@ -375,7 +376,7 @@ void agg_renderer<T>::render_marker(pixel_position const& pos, marker const& mar
             typedef agg::renderer_scanline_aa_alpha<renderer_base,
                         agg::span_allocator<agg::rgba8>,
                         span_gen_type> renderer_type;
-            img_accessor_type ia(pixf);
+            img_accessor_type ia(marker_pixf);
             interpolator_type interpolator(agg::trans_affine(p, 0, 0, width, height) );
             span_gen_type sg(ia, interpolator, filter);
             renderer_type rp(renb,sa, sg, unsigned(opacity*255));

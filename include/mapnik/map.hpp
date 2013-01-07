@@ -24,9 +24,10 @@
 #define MAPNIK_MAP_HPP
 
 // mapnik
+#include <mapnik/color.hpp>
+#include <mapnik/font_set.hpp>
 #include <mapnik/enumeration.hpp>
-#include <mapnik/feature_type_style.hpp>
-#include <mapnik/datasource.hpp>
+#include <mapnik/datasource.hpp>  // for featureset_ptr
 #include <mapnik/layer.hpp>
 #include <mapnik/params.hpp>
 
@@ -36,6 +37,7 @@
 namespace mapnik
 {
 
+class feature_type_style;
 class CoordTransform;
 
 class MAPNIK_DECL Map
@@ -152,7 +154,7 @@ public:
      *  @param name The name of the style.
      *  @param style The style to insert.
      *  @return true If success.
-     *  @return false If no success.
+     *          false If no success.
      */
     bool insert_style(std::string const& name,feature_type_style const& style);
 
@@ -169,9 +171,9 @@ public:
 
     /*! \brief Insert a fontset into the map.
      *  @param name The name of the fontset.
-     *  @param style The fontset to insert.
+     *  @param fontset The fontset to insert.
      *  @return true If success.
-     *  @return false If failure.
+     *          false If failure.
      */
     bool insert_fontset(std::string const& name, font_set const& fontset);
 
@@ -273,7 +275,7 @@ public:
     boost::optional<color> const& background() const;
 
     /*! \brief Set the map background image filename.
-     *  @param c Background image filename.
+     *  @param image_filename Background image filename.
      */
     void set_background_image(std::string const& image_filename);
 
@@ -309,8 +311,8 @@ public:
      */
     std::string const& base_path() const;
 
-    /*! \brief Set the map base path where paths should be releative to.
-     *  @param srs Map base_path.
+    /*! \brief Set the map base path where paths should be relative to.
+     *  @param base Map base_path.
      */
     void set_base_path(std::string const& base);
 

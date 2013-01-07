@@ -1,3 +1,10 @@
+UNAME := $(shell uname)
+LINK_FIX=LD_LIBRARY_PATH
+ifeq ($(UNAME), Darwin)
+	LINK_FIX=DYLD_LIBRARY_PATH
+else
+endif
+
 all: mapnik
 
 install:
@@ -9,6 +16,8 @@ mapnik:
 clean:
 	@python scons/scons.py -c --config=cache --implicit-cache --max-drift=1
 	@if test -e ".sconsign.dblite"; then rm ".sconsign.dblite"; fi
+	@find ./ -name "*.os" -exec rm {} \;
+	@find ./ -name "*.o" -exec rm {} \;
 
 distclean:
 	if test -e ".sconf_temp/"; then rm -r ".sconf_temp/"; fi
@@ -22,14 +31,17 @@ uninstall:
 	python scons/scons.py --config=cache --implicit-cache --max-drift=1 uninstall
 
 test:
-	@echo "*** Running visual tests..."
-	@python tests/visual_tests/test.py -q || true
-	@echo "*** Running C++ tests..."
-	@for FILE in tests/cpp_tests/*-bin; do \
-		$${FILE}; \
-	done
-	@echo "*** Running python tests..."
-	@python tests/run_tests.py -q
+	@ ./run_tests
+
+test-local:
+	@echo "*** Boostrapping local test environment..."
+	@export ${LINK_FIX}=`pwd`/src:${${LINK_FIX}} && \
+	export PYTHONPATH=`pwd`/bindings/python/:${PYTHONPATH} && \
+	export MAPNIK_FONT_DIRECTORY=`pwd`/fonts/dejavu-fonts-ttf-2.33/ttf/ && \
+	export MAPNIK_INPUT_PLUGINS_DIRECTORY=`pwd`/plugins/input/ && \
+	make test
+
+check: test-local
 
 demo:
 	@echo "*** Running rundemo.cpp…"

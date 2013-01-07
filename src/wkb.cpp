@@ -27,9 +27,9 @@
 #include <mapnik/coord_array.hpp>
 #include <mapnik/geom_util.hpp>
 #include <mapnik/feature.hpp>
+#include <mapnik/noncopyable.hpp>
 
 // boost
-#include <boost/utility.hpp>
 #include <boost/format.hpp>
 #include <boost/interprocess/streams/bufferstream.hpp>
 
@@ -38,7 +38,7 @@ namespace mapnik
 
 typedef coord_array<coord2d> CoordinateArray;
 
-struct wkb_reader : boost::noncopyable
+struct wkb_reader : mapnik::noncopyable
 {
 private:
     enum wkbByteOrder {
@@ -358,7 +358,18 @@ private:
                     {
                         poly->line_to(ar[j].x, ar[j].y);
                     }
-                    poly->close(ar[num_points-1].x, ar[num_points-1].y);
+
+                    if (ar[0].x == ar[num_points-1].x &&
+                        ar[0].y == ar[num_points-1].y)
+                    {
+                        poly->close(ar[num_points-1].x, ar[num_points-1].y);
+                    }
+                    else
+                    {
+                        // leave un-closed polygon intact - don't attempt to close them
+                        poly->line_to(ar[num_points-1].x, ar[num_points-1].y);
+                    }
+                    poly->set_close();
                 }
             }
             if (poly->size() > 2) // ignore if polygon has less than 3 vertices
@@ -394,7 +405,16 @@ private:
                     {
                         poly->line_to(ar[j].x, ar[j].y);
                     }
-                    poly->close(ar[num_points-1].x, ar[num_points-1].y);
+                    if (ar[0].x == ar[num_points-1].x &&
+                        ar[0].y == ar[num_points-1].y)
+                    {
+                        poly->close(ar[num_points-1].x, ar[num_points-1].y);
+                    }
+                    else
+                    {
+                        // leave un-closed polygon intact- don't attempt to close them
+                        poly->line_to(ar[num_points-1].x, ar[num_points-1].y);
+                    }
                 }
             }
             if (poly->size() > 2) // ignore if polygon has less than 3 vertices

@@ -26,7 +26,12 @@
 #include <mapnik/enumeration.hpp>
 #include <mapnik/color_factory.hpp>
 #include <mapnik/gamma_method.hpp>
+#include <mapnik/rule.hpp>
 #include <mapnik/line_symbolizer.hpp>
+#include <mapnik/line_pattern_symbolizer.hpp>
+#include <mapnik/polygon_pattern_symbolizer.hpp>
+#include <mapnik/point_symbolizer.hpp>
+#include <mapnik/markers_symbolizer.hpp>
 #include <mapnik/feature_type_style.hpp>
 #include <mapnik/text_properties.hpp>
 #include <mapnik/config_error.hpp>
@@ -125,7 +130,11 @@ DEFINE_NAME_TRAIT( double, "double")
 DEFINE_NAME_TRAIT( float, "float")
 DEFINE_NAME_TRAIT( unsigned, "unsigned")
 DEFINE_NAME_TRAIT( boolean, "boolean")
-DEFINE_NAME_TRAIT( int, "integer" )
+#ifdef BIGINT
+DEFINE_NAME_TRAIT( mapnik::value_integer, "long long" )
+#else
+DEFINE_NAME_TRAIT( mapnik::value_integer, "int" )
+#endif
 DEFINE_NAME_TRAIT( std::string, "string" )
 DEFINE_NAME_TRAIT( color, "color" )
 DEFINE_NAME_TRAIT(expression_ptr, "expression_ptr" )
@@ -395,11 +404,11 @@ boost::optional<T> xml_node::get_opt_attr(std::string const& name) const
 }
 
 template <typename T>
-T xml_node::get_attr(std::string const& name, T const& default_value) const
+T xml_node::get_attr(std::string const& name, T const& default_opt_value) const
 {
     boost::optional<T> value = get_opt_attr<T>(name);
     if (value) return *value;
-    return default_value;
+    return default_opt_value;
 }
 
 template <typename T>
@@ -448,6 +457,14 @@ unsigned xml_node::line() const
     return line_;
 }
 
+std::string xml_node::line_to_string() const
+{
+    std::string number;
+    util::to_string(number,line_);
+    return number;
+}
+
+
 #define compile_get_opt_attr(T) template boost::optional<T> xml_node::get_opt_attr<T>(std::string const&) const
 #define compile_get_attr(T) template T xml_node::get_attr<T>(std::string const&) const; template T xml_node::get_attr<T>(std::string const&, T const&) const
 #define compile_get_value(T) template T xml_node::get_value<T>() const
@@ -455,6 +472,7 @@ unsigned xml_node::line() const
 compile_get_opt_attr(boolean);
 compile_get_opt_attr(std::string);
 compile_get_opt_attr(unsigned);
+compile_get_opt_attr(mapnik::value_integer);
 compile_get_opt_attr(float);
 compile_get_opt_attr(double);
 compile_get_opt_attr(color);
@@ -471,11 +489,12 @@ compile_get_attr(std::string);
 compile_get_attr(filter_mode_e);
 compile_get_attr(point_placement_e);
 compile_get_attr(marker_placement_e);
+compile_get_attr(marker_multi_policy_e);
 compile_get_attr(pattern_alignment_e);
 compile_get_attr(line_rasterizer_e);
 compile_get_attr(colorizer_mode);
 compile_get_attr(double);
-compile_get_value(int);
+compile_get_value(value_integer);
 compile_get_value(double);
 compile_get_value(expression_ptr);
 } //ns mapnik

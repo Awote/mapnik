@@ -20,14 +20,9 @@
  *
  *****************************************************************************/
 
-// stl
-#include <iostream>
-#include <fstream>
-
 // mapnik
 #include <mapnik/global.hpp>
 #include <mapnik/debug.hpp>
-#include <mapnik/datasource.hpp>
 #include <mapnik/box2d.hpp>
 #include <mapnik/geometry.hpp>
 #include <mapnik/feature.hpp>
@@ -38,9 +33,11 @@
 
 #include "geos_featureset.hpp"
 
+// boost
+#include <boost/make_shared.hpp>
+
 using mapnik::query;
 using mapnik::box2d;
-using mapnik::Feature;
 using mapnik::feature_ptr;
 using mapnik::geometry_utils;
 using mapnik::transcoder;
@@ -48,14 +45,14 @@ using mapnik::feature_factory;
 
 geos_featureset::geos_featureset(GEOSGeometry* geometry,
                                  GEOSGeometry* extent,
-                                 int identifier,
+                                 mapnik::value_integer feature_id,
                                  std::string const& field,
                                  std::string const& field_name,
                                  std::string const& encoding)
     : geometry_(geometry),
       tr_(new transcoder(encoding)),
       extent_(extent),
-      identifier_(identifier),
+      feature_id_(feature_id),
       field_(field),
       field_name_(field_name),
       already_rendered_(false),
@@ -112,7 +109,7 @@ feature_ptr geos_featureset::next()
                 geos_wkb_ptr wkb(geometry_);
                 if (wkb.is_valid())
                 {
-                    feature_ptr feature(feature_factory::create(ctx_,identifier_));
+                    feature_ptr feature(feature_factory::create(ctx_,feature_id_));
 
                     if (geometry_utils::from_wkb(feature->paths(),
                                              wkb.data(),

@@ -24,6 +24,7 @@
 #define MAPNIK_MARKER_HELPERS_HPP
 
 #include <mapnik/color.hpp>
+#include <mapnik/feature.hpp>
 #include <mapnik/geometry.hpp>
 #include <mapnik/geom_util.hpp>
 #include <mapnik/markers_symbolizer.hpp>
@@ -87,11 +88,17 @@ struct vector_markers_rasterizer_dispatch
     {
         marker_placement_e placement_method = sym_.get_marker_placement();
 
-        if (placement_method != MARKER_LINE_PLACEMENT)
+        if (placement_method != MARKER_LINE_PLACEMENT ||
+            path.type() == Point)
         {
             double x = 0;
             double y = 0;
-            if (placement_method == MARKER_INTERIOR_PLACEMENT)
+            if (path.type() == LineString)
+            {
+                if (!label::middle_point(path, x, y))
+                    return;
+            }
+            else if (placement_method == MARKER_INTERIOR_PLACEMENT)
             {
                 if (!label::interior_position(path, x, y))
                     return;
@@ -183,11 +190,17 @@ struct raster_markers_rasterizer_dispatch
         marker_placement_e placement_method = sym_.get_marker_placement();
         box2d<double> bbox_(0,0, src_.width(),src_.height());
 
-        if (placement_method != MARKER_LINE_PLACEMENT)
+        if (placement_method != MARKER_LINE_PLACEMENT ||
+            path.type() == Point)
         {
             double x = 0;
             double y = 0;
-            if (placement_method == MARKER_INTERIOR_PLACEMENT)
+            if (path.type() == LineString)
+            {
+                if (!label::middle_point(path, x, y))
+                    return;
+            }
+            else if (placement_method == MARKER_INTERIOR_PLACEMENT)
             {
                 if (!label::interior_position(path, x, y))
                     return;
@@ -291,17 +304,17 @@ void build_ellipse(T const& sym, mapnik::feature_impl const& feature, svg_storag
     double height = 0;
     if (width_expr && height_expr)
     {
-        width = boost::apply_visitor(evaluate<Feature,value_type>(feature), *width_expr).to_double();
-        height = boost::apply_visitor(evaluate<Feature,value_type>(feature), *height_expr).to_double();
+        width = boost::apply_visitor(evaluate<feature_impl,value_type>(feature), *width_expr).to_double();
+        height = boost::apply_visitor(evaluate<feature_impl,value_type>(feature), *height_expr).to_double();
     }
     else if (width_expr)
     {
-        width = boost::apply_visitor(evaluate<Feature,value_type>(feature), *width_expr).to_double();
+        width = boost::apply_visitor(evaluate<feature_impl,value_type>(feature), *width_expr).to_double();
         height = width;
     }
     else if (height_expr)
     {
-        height = boost::apply_visitor(evaluate<Feature,value_type>(feature), *height_expr).to_double();
+        height = boost::apply_visitor(evaluate<feature_impl,value_type>(feature), *height_expr).to_double();
         width = height;
     }
     svg::svg_converter_type styled_svg(svg_path, marker_ellipse.attributes());
@@ -374,11 +387,11 @@ void setup_transform_scaling(agg::trans_affine & tr, box2d<double> const& bbox, 
 
     expression_ptr const& width_expr = sym.get_width();
     if (width_expr)
-        width = boost::apply_visitor(evaluate<Feature,value_type>(feature), *width_expr).to_double();
+        width = boost::apply_visitor(evaluate<feature_impl,value_type>(feature), *width_expr).to_double();
 
     expression_ptr const& height_expr = sym.get_height();
     if (height_expr)
-        height = boost::apply_visitor(evaluate<Feature,value_type>(feature), *height_expr).to_double();
+        height = boost::apply_visitor(evaluate<feature_impl,value_type>(feature), *height_expr).to_double();
 
     if (width > 0 && height > 0)
     {
@@ -396,6 +409,68 @@ void setup_transform_scaling(agg::trans_affine & tr, box2d<double> const& bbox, 
         double sy = height/bbox.height();
         tr *= agg::trans_affine_scaling(sy);
     }
+}
+
+// Apply markers to a feature with multiple geometries
+template <typename Converter>
+void apply_markers_multi(feature_impl & feature, Converter& converter, markers_symbolizer const& sym)
+{
+  std::size_t geom_count = feature.paths().size();
+  if (geom_count == 1)
+  {
+      converter.apply(feature.paths()[0]);
+  }
+  else if (geom_count > 1)
+  {
+      marker_multi_policy_e multi_policy = sym.get_marker_multi_policy();
+      marker_placement_e placement = sym.get_marker_placement();
+      if (placement == MARKER_POINT_PLACEMENT &&
+           multi_policy == MARKER_WHOLE_MULTI)
+      {
+          double x, y;
+          if (label::centroid_geoms(feature.paths().begin(), feature.paths().end(), x, y))
+          {
+              geometry_type pt(Point);
+              pt.move_to(x, y);
+              // unset any clipping since we're now dealing with a point
+              converter.template unset<clip_poly_tag>();
+              converter.apply(pt);
+          }
+      }
+      else if ((placement == MARKER_POINT_PLACEMENT || placement == MARKER_INTERIOR_PLACEMENT) &&
+                multi_policy == MARKER_LARGEST_MULTI)
+      {
+          // Only apply to path with largest envelope area
+          // TODO: consider using true area for polygon types
+          double maxarea = 0;
+          geometry_type* largest = 0;
+          BOOST_FOREACH(geometry_type & geom, feature.paths())
+          {
+              const box2d<double>& env = geom.envelope();
+              double area = env.width() * env.height();
+              if (area > maxarea)
+              {
+                  maxarea = area;
+                  largest = &geom;
+              }
+          }
+          if (largest)
+          {
+              converter.apply(*largest);
+          }
+      }
+      else
+      {
+          if (multi_policy != MARKER_EACH_MULTI && placement != MARKER_POINT_PLACEMENT)
+          {
+              MAPNIK_LOG_WARN(marker_symbolizer) << "marker_multi_policy != 'each' has no effect with marker_placement != 'point'";
+          }
+          BOOST_FOREACH(geometry_type & path, feature.paths())
+          {
+            converter.apply(path);
+          }
+      }
+  }
 }
 
 }

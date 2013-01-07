@@ -32,7 +32,10 @@
 #include <boost/algorithm/string.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/make_shared.hpp>
+
+// stl
 #include <sstream>
+#include <algorithm>
 
 // icu
 #include <unicode/ubidi.h>
@@ -59,7 +62,8 @@ freetype_engine::~freetype_engine()
 bool freetype_engine::is_font_file(std::string const& file_name)
 {
     /** only accept files that will be matched by freetype2's `figurefiletype()` */
-    std::string const& fn = boost::algorithm::to_lower_copy(file_name);
+    std::string fn = file_name;
+    std::transform(fn.begin(), fn.end(), fn.begin(), ::tolower);
     return boost::algorithm::ends_with(fn,std::string(".ttf")) ||
         boost::algorithm::ends_with(fn,std::string(".otf")) ||
         boost::algorithm::ends_with(fn,std::string(".ttc")) ||
@@ -323,12 +327,12 @@ void font_face_set::get_string_info(string_info & info, UnicodeString const& ust
 
 template <typename T>
 text_renderer<T>::text_renderer (pixmap_type & pixmap,
-                                 face_manager<freetype_engine> &font_manager_,
+                                 face_manager<freetype_engine> & font_manager,
                                  stroker & s,
                                  composite_mode_e comp_op,
                                  double scale_factor)
     : pixmap_(pixmap),
-      font_manager_(font_manager_),
+      font_manager_(font_manager),
       stroker_(s),
       comp_op_(comp_op),
       scale_factor_(scale_factor) {}

@@ -212,11 +212,22 @@ struct filter_in_box
 struct filter_at_point
 {
     coord2d pt_;
-    explicit filter_at_point(const coord2d& pt)
-        : pt_(pt) {}
+    double tol_;
+    explicit filter_at_point(const coord2d& pt, double tol=0)
+        : pt_(pt),
+          tol_(tol) {}
     bool pass(const box2d<double>& extent) const
     {
-        return extent.contains(pt_);
+        if (tol_ == 0)
+        {
+            return extent.contains(pt_);
+        }
+        else
+        {
+            box2d<double> extent2 = extent;
+            extent2.pad(tol_);
+            return extent2.contains(pt_);
+        }
     }
 };
 
@@ -329,6 +340,73 @@ bool centroid(PathType & path, double & x, double & y)
     return true;
 }
 
+// Compute centroid over a set of paths
+template <typename Iter>
+bool centroid_geoms(Iter start, Iter end, double & x, double & y)
+{
+  double x0 = 0.0;
+  double y0 = 0.0;
+  double x1 = 0.0;
+  double y1 = 0.0;
+  double start_x = x0;
+  double start_y = y0;
+
+  double atmp = 0.0;
+  double xtmp = 0.0;
+  double ytmp = 0.0;
+  unsigned count = 0;
+
+  while (start!=end)
+  {
+    typename Iter::value_type & path = *start++;
+    path.rewind(0);
+    unsigned command = path.vertex(&x0, &y0);
+    if (command == SEG_END) continue;
+
+    if ( ! count++ ) {
+      start_x = x0;
+      start_y = y0;
+    }
+
+    while (SEG_END != (command = path.vertex(&x1, &y1)))
+    {
+        double dx0 = x0 - start_x;
+        double dy0 = y0 - start_y;
+        double dx1 = x1 - start_x;
+        double dy1 = y1 - start_y;
+        double ai = dx0 * dy1 - dx1 * dy0;
+        atmp += ai;
+        xtmp += (dx1 + dx0) * ai;
+        ytmp += (dy1 + dy0) * ai;
+        x0 = x1;
+        y0 = y1;
+        ++count;
+    }
+
+  }
+
+  if (count == 0) return false;
+
+  if (count <= 2) {
+      x = (start_x + x0) * 0.5;
+      y = (start_y + y0) * 0.5;
+      return true;
+  }
+
+  if (atmp != 0)
+  {
+      x = (xtmp/(3*atmp)) + start_x;
+      y = (ytmp/(3*atmp)) + start_y;
+  }
+  else
+  {
+      x = x0;
+      y = y0;
+  }
+
+  return true;
+}
+
 template <typename PathType>
 bool hit_test(PathType & path, double x, double y, double tol)
 {
@@ -427,9 +505,9 @@ bool interior_position(PathType & path, double & x, double & y)
     double max_width = 0;
     for (unsigned ii = 1; ii < intersections.size(); ++ii)
     {
-        double x1=intersections[ii];
-        double xc=(x0+x1)/2.0;
-        double width = std::fabs(x1-x0);
+        double xi=intersections[ii];
+        double xc=(x0+xi)/2.0;
+        double width = std::fabs(xi-x0);
         if (width > max_width && hit_test(path,xc,y,0))
         {
             x=xc;

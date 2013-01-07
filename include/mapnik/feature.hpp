@@ -29,6 +29,8 @@
 #include <mapnik/geometry.hpp>
 #include <mapnik/raster.hpp>
 #include <mapnik/feature_kv_iterator.hpp>
+#include <mapnik/noncopyable.hpp>
+
 // boost
 #include <boost/version.hpp>
 #if BOOST_VERSION >= 104000
@@ -36,7 +38,7 @@
 #else
 #include <boost/property_map.hpp>
 #endif
-#include <boost/utility.hpp>
+
 #include <boost/shared_ptr.hpp>
 #include <boost/scoped_ptr.hpp>
 
@@ -52,7 +54,7 @@ typedef boost::shared_ptr<raster> raster_ptr;
 class feature_impl;
 
 template <typename T>
-class context : private boost::noncopyable,
+class context : private mapnik::noncopyable,
                 public boost::associative_property_map<T>
 
 {
@@ -93,7 +95,9 @@ private:
 typedef MAPNIK_DECL context<std::map<std::string,std::size_t> > context_type;
 typedef MAPNIK_DECL boost::shared_ptr<context_type> context_ptr;
 
-class MAPNIK_DECL feature_impl : private boost::noncopyable
+static const value default_value;
+
+class MAPNIK_DECL feature_impl : private mapnik::noncopyable
 {
     friend class feature_kv_iterator;
 public:
@@ -102,7 +106,7 @@ public:
     typedef std::vector<value_type> cont_type;
     typedef feature_kv_iterator iterator;
 
-    feature_impl(context_ptr const& ctx, int id)
+    feature_impl(context_ptr const& ctx, mapnik::value_integer id)
         : id_(id),
         ctx_(ctx),
         data_(ctx_->mapping_.size()),
@@ -110,9 +114,9 @@ public:
         raster_()
         {}
 
-    inline int id() const { return id_;}
+    inline mapnik::value_integer id() const { return id_;}
 
-    inline void set_id(int id) { id_ = id;}
+    inline void set_id(mapnik::value_integer id) { id_ = id;}
 
     template <typename T>
     void put(context_type::key_type const& key, T const& val)
@@ -125,7 +129,6 @@ public:
     {
         put_new(key,value(val));
     }
-
 
     void put(context_type::key_type const& key, value const& val)
     {
@@ -140,7 +143,6 @@ public:
             throw std::out_of_range(std::string("Key does not exist: '") + key + "'");
         }
     }
-
 
     void put_new(context_type::key_type const& key, value const& val)
     {
@@ -158,7 +160,6 @@ public:
         }
     }
 
-
     bool has_key(context_type::key_type const& key) const
     {
         return (ctx_->mapping_.find(key) != ctx_->mapping_.end());
@@ -170,21 +171,14 @@ public:
         if (itr != ctx_->mapping_.end())
             return get(itr->second);
         else
-            throw std::out_of_range(std::string("Key does not exist: '") + key + "'");
+            return default_value;
     }
 
     value_type const& get(std::size_t index) const
     {
         if (index < data_.size())
             return data_[index];
-        throw std::out_of_range("Index out of range");
-    }
-
-    boost::optional<value_type const&> get_optional(std::size_t index) const
-    {
-        if (index < data_.size())
-            return boost::optional<value_type const&>(data_[index]);
-        return boost::optional<value_type const&>();
+        return default_value;
     }
 
     std::size_t size() const
@@ -288,7 +282,14 @@ public:
             std::size_t index = itr->second;
             if (index < data_.size())
             {
-                ss << "  " << itr->first  << ":" <<  data_[itr->second] << std::endl;
+                if (data_[itr->second] == mapnik::value_null())
+                {
+                    ss << "  " << itr->first  << ":null" << std::endl;
+                }
+                else
+                {
+                    ss << "  " << itr->first  << ":" <<  data_[itr->second] << std::endl;
+                }
             }
         }
         ss << ")" << std::endl;
@@ -296,7 +297,7 @@ public:
     }
 
 private:
-    int id_;
+    mapnik::value_integer id_;
     context_ptr ctx_;
     cont_type data_;
     boost::ptr_vector<geometry_type> geom_cont_;
@@ -311,6 +312,8 @@ inline std::ostream& operator<< (std::ostream & out,feature_impl const& f)
 }
 
 typedef feature_impl Feature;
+
+typedef MAPNIK_DECL boost::shared_ptr<Feature> feature_ptr;
 
 }
 

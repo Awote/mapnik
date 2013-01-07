@@ -182,11 +182,11 @@ def test_shield_symbolizer_modify():
     def check_transform(expr, expect_str=None):
         s.transform = expr
         eq_(s.transform, expr if expect_str is None else expect_str)
-    check_transform("matrix(1 2 3 4 5 6)", "matrix(1.0, 2.0, 3.0, 4.0, 5.0, 6.0)")
+    check_transform("matrix(1 2 3 4 5 6)", "matrix(1, 2, 3, 4, 5, 6)")
     check_transform("matrix(1, 2, 3, 4, 5, 6 +7)", "matrix(1, 2, 3, 4, 5, (6+7))")
     check_transform("rotate([a])")
     check_transform("rotate([a] -2)", "rotate(([a]-2))")
-    check_transform("rotate([a] -2 -3)", "rotate([a], -2.0, -3.0)")
+    check_transform("rotate([a] -2 -3)", "rotate([a], -2, -3)")
     check_transform("rotate([a] -2 -3 -4)", "rotate(((([a]-2)-3)-4))")
     check_transform("rotate([a] -2, 3, 4)", "rotate(([a]-2), 3, 4)")
     check_transform("translate([tx]) rotate([a])")
@@ -221,6 +221,7 @@ def test_markers_symbolizer():
     eq_(p.fill_opacity,None)
     eq_(p.filename,'shape://ellipse')
     eq_(p.placement,mapnik.marker_placement.POINT_PLACEMENT)
+    eq_(p.multi_policy,mapnik.marker_multi_policy.EACH)
     eq_(p.fill,None)
     eq_(p.ignore_placement,False)
     eq_(p.spacing,100)
@@ -230,7 +231,7 @@ def test_markers_symbolizer():
     eq_(p.transform,'')
     eq_(p.clip,True)
     eq_(p.comp_op,mapnik.CompositeOp.src_over)
-    
+
 
     p.width = mapnik.Expression('12')
     p.height = mapnik.Expression('12')
@@ -251,10 +252,14 @@ def test_markers_symbolizer():
     p.allow_overlap = True
     p.opacity = 0.5
     p.fill_opacity = 0.5
+    p.placement = mapnik.marker_placement.LINE_PLACEMENT
+    p.multi_policy = mapnik.marker_multi_policy.WHOLE
 
     eq_(p.allow_overlap, True)
     eq_(p.opacity, 0.5)
     eq_(p.fill_opacity, 0.5)
+    eq_(p.multi_policy,mapnik.marker_multi_policy.WHOLE)
+    eq_(p.placement,mapnik.marker_placement.LINE_PLACEMENT)
 
     #https://github.com/mapnik/mapnik/issues/1285
     #https://github.com/mapnik/mapnik/issues/1427

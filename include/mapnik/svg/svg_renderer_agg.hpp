@@ -24,14 +24,13 @@
 #define MAPNIK_SVG_RENDERER_AGG_HPP
 
 // mapnik
-#include <mapnik/debug.hpp>
 #include <mapnik/svg/svg_path_attributes.hpp>
 #include <mapnik/gradient.hpp>
 #include <mapnik/box2d.hpp>
 #include <mapnik/grid/grid_pixel.hpp>
+#include <mapnik/noncopyable.hpp>
 
 // boost
-#include <boost/utility.hpp>
 #include <boost/foreach.hpp>
 
 // agg
@@ -100,7 +99,7 @@ private:
 };
 
 template <typename VertexSource, typename AttributeSource, typename ScanlineRenderer, typename PixelFormat>
-class svg_renderer_agg : boost::noncopyable
+class svg_renderer_agg : mapnik::noncopyable
 {
 public:
     typedef agg::conv_curve<VertexSource>            curved_type;
@@ -272,7 +271,7 @@ public:
             curved_.approximation_scale(scl);
             curved_.angle_tolerance(0.0);
 
-            rgba8 color;
+            typename PixelFormat::color_type color;
 
             if (attr.fill_flag || attr.fill_gradient.get_gradient_type() != NO_GRADIENT)
             {
@@ -380,7 +379,7 @@ public:
             curved_.approximation_scale(scl);
             curved_.angle_tolerance(0.0);
 
-            mapnik::gray32 color(feature_id);
+            typename PixelFormat::color_type color(feature_id);
 
             if (attr.fill_flag || attr.fill_gradient.get_gradient_type() != NO_GRADIENT)
             {

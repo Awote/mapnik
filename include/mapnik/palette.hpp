@@ -26,15 +26,14 @@
 // mapnik
 #include <mapnik/config.hpp>
 #include <mapnik/global.hpp>
+#include <mapnik/noncopyable.hpp>
 
 // boost
-#include <boost/utility.hpp>
 #include <boost/unordered_map.hpp>
 
 // stl
 #include <vector>
 #include <map>
-#include <iostream>
 #include <set>
 #include <algorithm>
 #include <cmath>
@@ -63,7 +62,7 @@ struct rgb {
     byte g;
     byte b;
 
-    inline rgb(byte r_, byte g_, byte b_) : r(r_), g(g_), b(b_) {};
+    inline rgb(byte r_, byte g_, byte b_) : r(r_), g(g_), b(b_) {}
     rgb(rgba const& c);
 
     inline bool operator==(const rgb& y) const
@@ -127,7 +126,7 @@ struct rgba
 typedef boost::unordered_map<unsigned, unsigned> rgba_hash_table;
 
 
-class MAPNIK_DECL rgba_palette : private boost::noncopyable {
+class MAPNIK_DECL rgba_palette : private mapnik::noncopyable {
 public:
     enum palette_type { PALETTE_RGBA = 0, PALETTE_RGB = 1, PALETTE_ACT = 2 };
 
@@ -151,6 +150,7 @@ public:
     }
 
     bool valid() const;
+    std::string to_string() const;
 
 private:
     void parse(std::string const& pal, palette_type type);

@@ -21,6 +21,10 @@
  *****************************************************************************/
 
 // mapnik
+#include <mapnik/rule.hpp>
+#include <mapnik/color.hpp>
+#include <mapnik/font_set.hpp>
+#include <mapnik/enumeration.hpp>
 #include <mapnik/layer.hpp>
 #include <mapnik/feature_type_style.hpp>
 #include <mapnik/debug.hpp>
@@ -238,7 +242,9 @@ unsigned Map::height() const
 
 void Map::set_width(unsigned width)
 {
-    if (width >= MIN_MAPSIZE && width <= MAX_MAPSIZE)
+    if (width != width_ &&
+        width >= MIN_MAPSIZE &&
+        width <= MAX_MAPSIZE)
     {
         width_=width;
         fixAspectRatio();
@@ -247,7 +253,9 @@ void Map::set_width(unsigned width)
 
 void Map::set_height(unsigned height)
 {
-    if (height >= MIN_MAPSIZE && height <= MAX_MAPSIZE)
+    if (height != height_ &&
+        height >= MIN_MAPSIZE &&
+        height <= MAX_MAPSIZE)
     {
         height_=height;
         fixAspectRatio();
@@ -256,8 +264,12 @@ void Map::set_height(unsigned height)
 
 void Map::resize(unsigned width,unsigned height)
 {
-    if (width >= MIN_MAPSIZE && width <= MAX_MAPSIZE &&
-        height >= MIN_MAPSIZE && height <= MAX_MAPSIZE)
+    if (width != width_ &&
+        height != height_ &&
+        width >= MIN_MAPSIZE &&
+        width <= MAX_MAPSIZE &&
+        height >= MIN_MAPSIZE &&
+        height <= MAX_MAPSIZE)
     {
         width_=width;
         height_=height;

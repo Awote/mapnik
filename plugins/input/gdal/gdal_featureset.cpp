@@ -23,11 +23,15 @@
 // mapnik
 #include <mapnik/global.hpp>
 #include <mapnik/debug.hpp>
+#include <mapnik/image_data.hpp>
+#include <mapnik/raster.hpp>
 #include <mapnik/ctrans.hpp>
+#include <mapnik/feature.hpp>
 #include <mapnik/feature_factory.hpp>
 
 // boost
 #include <boost/format.hpp>
+#include <boost/make_shared.hpp>
 
 #include "gdal_featureset.hpp"
 #include <gdal_priv.h>
@@ -35,7 +39,6 @@
 using mapnik::query;
 using mapnik::coord2d;
 using mapnik::box2d;
-using mapnik::Feature;
 using mapnik::feature_ptr;
 using mapnik::CoordTransform;
 using mapnik::geometry_type;
@@ -200,8 +203,8 @@ feature_ptr gdal_featureset::get_feature(mapnik::query const& q)
         // if layer-level filter_factor is set, apply it
         if (filter_factor_)
         {
-            im_width *= filter_factor_;
-            im_height *= filter_factor_;
+            im_width = int(im_width * filter_factor_ + 0.5);
+            im_height = int(im_height * filter_factor_ + 0.5);
 
             MAPNIK_LOG_DEBUG(gdal) << "gdal_featureset: Applying layer filter_factor=" << filter_factor_;
         }
@@ -209,8 +212,8 @@ feature_ptr gdal_featureset::get_feature(mapnik::query const& q)
         else
         {
             double sym_downsample_factor = q.get_filter_factor();
-            im_width *= sym_downsample_factor;
-            im_height *= sym_downsample_factor;
+            im_width = int(im_width * sym_downsample_factor + 0.5);
+            im_height = int(im_height * sym_downsample_factor + 0.5);
         }
 
         // case where we need to avoid upsampling so that the
@@ -445,10 +448,10 @@ feature_ptr gdal_featureset::get_feature(mapnik::query const& q)
                     {
                         MAPNIK_LOG_DEBUG(gdal) << "gdal_featureset: Loading colour table...";
 
-                        unsigned nodata_value = static_cast<unsigned>(nodata);
+                        unsigned nodata_value = static_cast<unsigned>(nodata); // FIXME: is it realy unsigned ?
                         if (hasNoData)
                         {
-                            feature->put("NODATA",static_cast<int>(nodata_value));
+                            feature->put("NODATA",static_cast<mapnik::value_integer>(nodata_value));
                         }
                         for (unsigned y = 0; y < image.height(); ++y)
                         {

@@ -21,6 +21,7 @@
  *****************************************************************************/
 
 // mapnik
+#include <mapnik/rule.hpp>
 #include <mapnik/layer.hpp>
 #include <mapnik/feature_type_style.hpp>
 #include <mapnik/debug.hpp>
@@ -34,7 +35,10 @@
 #include <mapnik/text_placements/dummy.hpp>
 #include <mapnik/image_compositing.hpp>
 #include <mapnik/image_scaling.hpp>
+#include <mapnik/image_filter.hpp>
 #include <mapnik/image_filter_types.hpp>
+#include <mapnik/parse_path.hpp>
+
 // boost
 #include <boost/algorithm/string.hpp>
 #include <boost/optional.hpp>
@@ -97,6 +101,10 @@ public:
         if ( sym.get_rasterizer() != dfl.get_rasterizer() || explicit_defaults_ )
         {
             set_attr( sym_node, "rasterizer", sym.get_rasterizer() );
+        }
+        if ( sym.offset() != dfl.offset() || explicit_defaults_ )
+        {
+            set_attr( sym_node, "offset", sym.offset() );
         }
         serialize_symbolizer_base(sym_node, sym);
     }
@@ -318,6 +326,10 @@ public:
         if (sym.get_marker_placement() != dfl.get_marker_placement() || explicit_defaults_)
         {
             set_attr( sym_node, "placement", sym.get_marker_placement() );
+        }
+        if ( sym.get_marker_multi_policy() != dfl.get_marker_multi_policy() || explicit_defaults_ )
+        {
+            set_attr( sym_node, "multi-policy", sym.get_marker_multi_policy() );
         }
         if (sym.get_image_transform())
         {
@@ -656,12 +668,12 @@ public:
     serialize_type( boost::property_tree::ptree & node):
         node_(node) {}
 
-    void operator () ( int val ) const
+    void operator () ( mapnik::value_integer val ) const
     {
         node_.put("<xmlattr>.type", "int" );
     }
 
-    void operator () ( double val ) const
+    void operator () ( mapnik::value_double val ) const
     {
         node_.put("<xmlattr>.type", "float" );
     }

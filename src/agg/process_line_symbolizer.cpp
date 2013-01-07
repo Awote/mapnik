@@ -21,6 +21,7 @@
  *****************************************************************************/
 
 // mapnik
+#include <mapnik/feature.hpp>
 #include <mapnik/graphics.hpp>
 #include <mapnik/agg_renderer.hpp>
 #include <mapnik/agg_helpers.hpp>
@@ -89,16 +90,12 @@ void agg_renderer<T>::process(line_symbolizer const& sym,
     if (sym.clip())
     {
         double padding = (double)(query_extent_.width()/pixmap_.width());
-        float half_stroke = stroke_.get_width()/2.0;
+        double half_stroke = stroke_.get_width()/2.0;
         if (half_stroke > 1)
             padding *= half_stroke;
         if (fabs(sym.offset()) > 0)
             padding *= fabs(sym.offset()) * 1.2;
-        double x0 = query_extent_.minx();
-        double y0 = query_extent_.miny();
-        double x1 = query_extent_.maxx();
-        double y1 = query_extent_.maxy();
-        clipping_extent.init(x0 - padding, y0 - padding, x1 + padding , y1 + padding);
+        clipping_extent.pad(padding);
         // debugging
         //box2d<double> inverse(x0 + padding, y0 + padding, x1 - padding , y1 - padding);
         //draw_geo_extent(inverse,mapnik::color("red"));
@@ -156,7 +153,6 @@ void agg_renderer<T>::process(line_symbolizer const& sym,
         }
 
         typedef agg::renderer_scanline_aa_solid<renderer_base> renderer_type;
-        renderer_base renb(pixf);
         renderer_type ren(renb);
         ren.color(agg::rgba8_pre(r, g, b, int(a * stroke_.get_opacity())));
         agg::scanline_u8 sl;

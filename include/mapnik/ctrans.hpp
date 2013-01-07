@@ -24,7 +24,6 @@
 #define MAPNIK_CTRANS_HPP
 
 // mapnik
-#include <mapnik/debug.hpp>
 #include <mapnik/box2d.hpp>
 #include <mapnik/vertex.hpp>
 #include <mapnik/proj_transform.hpp>
@@ -98,6 +97,11 @@ struct MAPNIK_DECL coord_transform
     void rewind(unsigned pos) const
     {
         geom_.rewind(pos);
+    }
+
+    unsigned type() const
+    {
+        return static_cast<unsigned>(geom_.type());
     }
 
     Geometry const& geom() const

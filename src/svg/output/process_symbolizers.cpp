@@ -44,11 +44,11 @@ bool svg_renderer<OutputIterator>::process(rule::symbolizers const& syms,
     // generate path output for each geometry of the current feature.
     for(unsigned i=0; i<feature.num_geometries(); ++i)
     {
-        geometry_type const& geom = feature.get_geometry(i);
-        if(geom.size() > 1)
+        geometry_type & geom = feature.get_geometry(i);
+        if(geom.size() > 0)
         {
-            //path_type path(t_, geom, prj_trans);
-            //generator_.generate_path(path, path_attributes_);
+            path_type path(t_, geom, prj_trans);
+            generator_.generate_path(path, path_attributes_);
         }
     }
 
@@ -57,7 +57,7 @@ bool svg_renderer<OutputIterator>::process(rule::symbolizers const& syms,
     path_attributes_.reset();
 
     return true;
-};
+}
 
 template bool svg_renderer<std::ostream_iterator<char> >::process(rule::symbolizers const& syms,
                                                                   mapnik::feature_impl & feature,

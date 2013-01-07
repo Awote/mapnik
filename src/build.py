@@ -100,6 +100,8 @@ else: # unix, non-macos
 
 source = Split(
     """
+    params.cpp
+    image_filter_types.cpp
     miniz_png.cpp
     color.cpp
     css_color_grammar.cpp
@@ -202,45 +204,6 @@ if env['HAS_CAIRO']:
     libmapnik_cxxflags.append('-DHAVE_CAIRO')
     lib_env.PrependUnique(CPPPATH=copy(env['CAIROMM_CPPPATHS']))
     source.insert(0,'cairo_renderer.cpp')
-    #cairo_env.PrependUnique(CPPPATH=env['CAIROMM_CPPPATHS'])
-    # not safe, to much depends on graphics.hpp
-    #cairo_env = lib_env.Clone()
-    #cairo_env.Append(CXXFLAGS = '-DHAVE_CAIRO')
-    #fixup = ['feature_type_style.cpp','load_map.cpp','cairo_renderer.cpp','graphics.cpp','image_util.cpp']
-    #for cpp in fixup:
-    #    if cpp in source:
-    #        source.remove(cpp)
-    #    if env['LINKING'] == 'static':
-    #        source.insert(0,cairo_env.StaticObject(cpp))
-    #    else:
-    #        source.insert(0,cairo_env.SharedObject(cpp))
-
-
-processor_cpp = 'feature_style_processor.cpp'
-
-if env['RENDERING_STATS']:
-    env3 = lib_env.Clone()
-    env3.Append(CXXFLAGS='-DRENDERING_STATS')
-    if env['LINKING'] == 'static':
-        source.insert(0,env3.StaticObject(processor_cpp))
-    else:
-        source.insert(0,env3.SharedObject(processor_cpp))
-else:
-    source.insert(0,processor_cpp);
-
-if env.get('BOOST_LIB_VERSION_FROM_HEADER'):
-    boost_version_from_header = int(env['BOOST_LIB_VERSION_FROM_HEADER'].split('_')[1])
-    if boost_version_from_header < 46:
-        # avoid ubuntu issue with boost interprocess:
-        # https://github.com/mapnik/mapnik/issues/1001
-        env4 = lib_env.Clone()
-        env4.Append(CXXFLAGS = '-fpermissive')
-        cpp ='mapped_memory_cache.cpp'
-        source.remove(cpp)
-        if env['LINKING'] == 'static':
-            source.insert(0,env4.StaticObject(cpp))
-        else:
-            source.insert(0,env4.SharedObject(cpp))
 
 if env['JPEG']:
     source += Split(
@@ -308,6 +271,21 @@ if env['SVG_RENDERER']: # svg backend
     lib_env.Append(CXXFLAGS = '-DSVG_RENDERER')
     libmapnik_cxxflags.append('-DSVG_RENDERER')
 
+
+if env.get('BOOST_LIB_VERSION_FROM_HEADER'):
+    boost_version_from_header = int(env['BOOST_LIB_VERSION_FROM_HEADER'].split('_')[1])
+    if boost_version_from_header < 46:
+        # avoid ubuntu issue with boost interprocess:
+        # https://github.com/mapnik/mapnik/issues/1001
+        env4 = lib_env.Clone()
+        env4.Append(CXXFLAGS = '-fpermissive')
+        cpp ='mapped_memory_cache.cpp'
+        source.remove(cpp)
+        if env['LINKING'] == 'static':
+            source.insert(0,env4.StaticObject(cpp))
+        else:
+            source.insert(0,env4.SharedObject(cpp))
+
 if env['XMLPARSER'] == 'libxml2' and env['HAS_LIBXML2']:
     source += Split(
         """
@@ -330,6 +308,18 @@ else:
         rapidxml_loader.cpp
         """
     )
+
+processor_cpp = 'feature_style_processor.cpp'
+
+if env['RENDERING_STATS']:
+    env3 = lib_env.Clone()
+    env3.Append(CXXFLAGS='-DRENDERING_STATS')
+    if env['LINKING'] == 'static':
+        source.insert(0,env3.StaticObject(processor_cpp))
+    else:
+        source.insert(0,env3.SharedObject(processor_cpp))
+else:
+    source.insert(0,processor_cpp);
 
 if env['CUSTOM_LDFLAGS']:
     linkflags = '%s %s' % (env['CUSTOM_LDFLAGS'], mapnik_lib_link_flag)
@@ -392,6 +382,14 @@ else:
     env['create_uninstall_target'](env, target2)
     env['create_uninstall_target'](env, target1)
     env['create_uninstall_target'](env, target)
+
+    # to enable local testing
+    lib_major_minor = "%s.%d.%d" % (os.path.basename(env.subst(env['MAPNIK_LIB_NAME'])), int(major), int(minor))
+    local_lib = os.path.basename(env.subst(env['MAPNIK_LIB_NAME']))
+    if os.path.islink(lib_major_minor) or os.path.exists(lib_major_minor):
+        os.remove(lib_major_minor)
+    os.symlink(local_lib,lib_major_minor)
+    Clean(mapnik,lib_major_minor);
 
 if not env['RUNTIME_LINK'] == 'static':
     Depends(mapnik, env.subst('../deps/agg/libagg.a'))

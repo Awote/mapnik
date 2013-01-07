@@ -327,6 +327,7 @@ opts.AddVariables(
     BoolVariable('RENDERING_STATS', 'Output rendering statistics during style processing', 'False'),
 
     BoolVariable('SVG_RENDERER', 'build support for native svg renderer', 'False'),
+    BoolVariable('CPP_TESTS', 'Compile the C++ tests', 'True'),
 
     # Variables for optional dependencies
     ('GEOS_CONFIG', 'The path to the geos-config executable.', 'geos-config'),
@@ -366,6 +367,7 @@ opts.AddVariables(
     BoolVariable('PGSQL2SQLITE', 'Compile and install a utility to convert postgres tables to sqlite', 'False'),
     BoolVariable('COLOR_PRINT', 'Print build status information in color', 'True'),
     BoolVariable('SAMPLE_INPUT_PLUGINS', 'Compile and install sample plugins', 'False'),
+    BoolVariable('BIGINT', 'Compile support for 64-bit integers in mapnik::value', 'True'),
     )
 
 # variables to pickle after successful configure step
@@ -429,7 +431,8 @@ pickle_store = [# Scons internal variables
         'CAIROMM_CPPPATHS',
         'SVG_RENDERER',
         'SQLITE_LINKFLAGS',
-        'BOOST_LIB_VERSION_FROM_HEADER'
+        'BOOST_LIB_VERSION_FROM_HEADER',
+        'BIGINT'
         ]
 
 # Add all other user configurable options to pickle pickle_store
@@ -1115,6 +1118,9 @@ if not preconfigured:
             # expression_string.cpp and map.cpp use fromUTF* function only available in >= ICU 4.2
             env['MISSING_DEPS'].append(env['ICU_LIB_NAME'])
 
+    if env['BIGINT']:
+        env.Append(CXXFLAGS = '-DBIGINT')
+
     if env['THREADING'] == 'multi':
         thread_flag = thread_suffix
     else:
@@ -1332,7 +1338,7 @@ if not preconfigured:
     else:
         color_print(4,'Not building with cairo support, pass CAIRO=True to enable')
 
-    if 'python' in env['BINDINGS']:
+    if 'python' in env['BINDINGS'] or 'python' in env['REQUESTED_PLUGINS']:
         if not os.access(env['PYTHON'], os.X_OK):
             color_print(1,"Cannot run python interpreter at '%s', make sure that you have the permissions to execute it." % env['PYTHON'])
             Exit(1)
@@ -1387,22 +1393,22 @@ if not preconfigured:
         else:
             env['PYTHON_IS_64BIT'] = False
 
-        if py3 and env['BOOST_PYTHON_LIB'] == 'boost_python':
-            env['BOOST_PYTHON_LIB'] = 'boost_python3%s' % env['BOOST_APPEND']
-        elif env['BOOST_PYTHON_LIB'] == 'boost_python':
-            env['BOOST_PYTHON_LIB'] = 'boost_python%s' % env['BOOST_APPEND']
+        if 'python' in env['BINDINGS']:
+            if py3 and env['BOOST_PYTHON_LIB'] == 'boost_python':
+                env['BOOST_PYTHON_LIB'] = 'boost_python3%s' % env['BOOST_APPEND']
+            elif env['BOOST_PYTHON_LIB'] == 'boost_python':
+                env['BOOST_PYTHON_LIB'] = 'boost_python%s' % env['BOOST_APPEND']
+            if not conf.CheckHeader(header='boost/python/detail/config.hpp',language='C++'):
+                color_print(1,'Could not find required header files for boost python')
+                env['MISSING_DEPS'].append('boost python')
 
-        if not conf.CheckHeader(header='boost/python/detail/config.hpp',language='C++'):
-            color_print(1,'Could not find required header files for boost python')
-            env['MISSING_DEPS'].append('boost python')
-
-        if env['CAIRO']:
-            if conf.CheckPKGConfig('0.15.0') and conf.CheckPKG('pycairo'):
-                env['HAS_PYCAIRO'] = True
+            if env['CAIRO']:
+                if conf.CheckPKGConfig('0.15.0') and conf.CheckPKG('pycairo'):
+                    env['HAS_PYCAIRO'] = True
+                else:
+                    env['SKIPPED_DEPS'].extend(['pycairo'])
             else:
-                env['SKIPPED_DEPS'].extend(['pycairo'])
-        else:
-            color_print(4,'Not building with pycairo support, pass CAIRO=True to enable')
+                color_print(4,'Not building with pycairo support, pass CAIRO=True to enable')
 
 
     #### End Config Stage for Required Dependencies ####
@@ -1527,7 +1533,7 @@ if not preconfigured:
             if env['DEBUG_UNDEFINED']:
                 env.Append(CXXFLAGS = '-fcatch-undefined-behavior -ftrapv -fwrapv')
 
-        if 'python' in env['BINDINGS']:
+        if 'python' in env['BINDINGS'] or 'python' in env['REQUESTED_PLUGINS']:
             majver, minver = env['PYTHON_VERSION'].split('.')
             # we don't want the includes it in the main environment...
             # as they are later set in the python build.py
@@ -1543,9 +1549,10 @@ if not preconfigured:
                 color_print(1,"Python version 2.2 or greater required")
                 Exit(1)
 
-            color_print(4,'Bindings Python version... %s' % env['PYTHON_VERSION'])
-            color_print(4,'Python %s prefix... %s' % (env['PYTHON_VERSION'], env['PYTHON_SYS_PREFIX']))
-            color_print(4,'Python bindings will install in... %s' % os.path.normpath(env['PYTHON_INSTALL_LOCATION']))
+            if 'python' in env['BINDINGS']:
+                color_print(4,'Bindings Python version... %s' % env['PYTHON_VERSION'])
+                color_print(4,'Python %s prefix... %s' % (env['PYTHON_VERSION'], env['PYTHON_SYS_PREFIX']))
+                color_print(4,'Python bindings will install in... %s' % os.path.normpath(env['PYTHON_INSTALL_LOCATION']))
             env.Replace(**backup)
 
         # if requested, sort LIBPATH and CPPPATH one last time before saving...
@@ -1693,6 +1700,9 @@ if not HELP_REQUESTED:
             SConscript('plugins/input/%s/build.py' % plugin)
         else:
             color_print(1,"Notice: dependencies not met for plugin '%s', not building..." % plugin)
+            # also clear out locally built target
+            if os.path.exists('plugins/input/%s.input' % plugin):
+                os.unlink('plugins/input/%s.input' % plugin)
 
     create_uninstall_target(env, env['MAPNIK_LIB_DIR_DEST'], False)
     create_uninstall_target(env, env['MAPNIK_INPUT_PLUGINS_DEST'] , False)
@@ -1741,13 +1751,11 @@ if not HELP_REQUESTED:
     SConscript('fonts/build.py')
 
     # build C++ tests
-    # not ready for release
-    SConscript('tests/cpp_tests/build.py')
+    if env['CPP_TESTS']:
+        SConscript('tests/cpp_tests/build.py')
 
-    # not currently maintained
-    # https://github.com/mapnik/mapnik/issues/1438
-    if env['SVG_RENDERER']:
-        SConscript('tests/cpp_tests/svg_renderer_tests/build.py')
+        if env['SVG_RENDERER']:
+            SConscript('tests/cpp_tests/svg_renderer_tests/build.py')
 
     # install pkg-config script and mapnik-config script
     SConscript('utils/mapnik-config/build.py')

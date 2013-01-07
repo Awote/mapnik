@@ -21,13 +21,14 @@
  *****************************************************************************/
 
 //mapnik
+#include <mapnik/feature.hpp>
 #include <mapnik/symbolizer.hpp>
 #include <mapnik/map.hpp>
 #include <mapnik/transform_processor.hpp>
 
 namespace mapnik {
 
-void evaluate_transform(agg::trans_affine& tr, Feature const& feature,
+void evaluate_transform(agg::trans_affine& tr, feature_impl const& feature,
                         transform_list_ptr const& trans_expr)
 {
     if (trans_expr)
@@ -89,9 +90,13 @@ transform_type const& symbolizer_base::get_transform() const
 std::string symbolizer_base::get_transform_string() const
 {
     if (affine_transform_)
+    {
         return transform_processor_type::to_string(*affine_transform_);
+    }
     else
+    {
         return std::string();
+    }
 }
 
 void symbolizer_base::set_clip(bool clip)
@@ -189,9 +194,13 @@ transform_type const& symbolizer_with_image::get_image_transform() const
 std::string symbolizer_with_image::get_image_transform_string() const
 {
     if (image_transform_)
+    {
         return transform_processor_type::to_string(*image_transform_);
+    }
     else
+    {
         return std::string();
+    }
 }
 
 } // end of namespace mapnik

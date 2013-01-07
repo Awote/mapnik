@@ -35,8 +35,6 @@
 
 // stl
 #include <algorithm>
-#include <iostream>
-#include <sstream>
 #include <stdexcept>
 
 namespace mapnik {
@@ -57,7 +55,7 @@ datasource_cache::~datasource_cache()
     lt_dlexit();
 }
 
-datasource_ptr datasource_cache::create(const parameters& params, bool bind)
+datasource_ptr datasource_cache::create(const parameters& params)
 {
     boost::optional<std::string> type = params.get<std::string>("type");
     if ( ! type)
@@ -74,17 +72,17 @@ datasource_ptr datasource_cache::create(const parameters& params, bool bind)
     std::map<std::string,boost::shared_ptr<PluginInfo> >::iterator itr=plugins_.find(*type);
     if ( itr == plugins_.end() )
     {
-        std::ostringstream s;
-        s << "Could not create datasource for type: '" << *type << "'";
+        std::string s("Could not create datasource for type: '");
+        s += *type + "'";
         if (plugin_directories_.empty())
         {
-            s << " (no datasource plugin directories have been successfully registered)";
+            s + " (no datasource plugin directories have been successfully registered)";
         }
         else
         {
-            s << " (searched for datasource plugins in '" << plugin_directories() << "')";
+            s + " (searched for datasource plugins in '" + plugin_directories() + "')";
         }
-        throw config_error(s.str());
+        throw config_error(s);
     }
 
     if ( ! itr->second->handle())
@@ -116,7 +114,7 @@ datasource_ptr datasource_cache::create(const parameters& params, bool bind)
     }
 #endif
 
-    ds = datasource_ptr(create_datasource(params, bind), datasource_deleter());
+    ds = datasource_ptr(create_datasource(params), datasource_deleter());
 
     MAPNIK_LOG_DEBUG(datasource_cache) << "datasource_cache: Datasource=" << ds << " type=" << type;
 
@@ -167,9 +165,9 @@ void datasource_cache::register_datasources(std::string const& str)
 #endif
             {
 #if (BOOST_FILESYSTEM_VERSION == 3)
-                if (register_datasource(itr->path().string().c_str()))
+                if (register_datasource(itr->path().string()))
 #else // v2
-                if (register_datasource(itr->string().c_str()))
+                if (register_datasource(itr->string()))
 #endif
                 {
                     registered_ = true;

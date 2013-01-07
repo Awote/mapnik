@@ -26,13 +26,10 @@
 // mapnik
 #include <mapnik/global.hpp>
 #include <mapnik/palette.hpp>
-
-// boost
-#include <boost/utility.hpp>
+#include <mapnik/noncopyable.hpp>
 
 // stl
 #include <vector>
-#include <iostream>
 #include <deque>
 #include <algorithm>
 
@@ -52,7 +49,7 @@ struct RGBPolicy
 };
 
 template <typename T, typename InsertPolicy = RGBPolicy >
-class octree : private boost::noncopyable
+class octree : private mapnik::noncopyable
 {
     struct node
     {
@@ -251,7 +248,7 @@ public:
 
             // select best of all reducible:
             unsigned red_idx = leaf_level_-1;
-            unsigned bestv = (*reducible_[red_idx].begin())->reduce_cost;
+            unsigned bestv = static_cast<unsigned>((*reducible_[red_idx].begin())->reduce_cost);
             for(unsigned i=red_idx; i>=InsertPolicy::MIN_LEVELS; i--)
             {
                 if (!reducible_[i].empty())

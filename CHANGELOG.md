@@ -8,6 +8,25 @@ For a complete change history, see the git log.
 
 ## Future
 
+- Fixed building symbolizer rendering to be fully sensitive to alpha (8b66128c892 / bc8ea1c5a7a)
+
+- Added 64 bit integer support in the grid_renderer (#1662)
+
+- `<Filter>[attr]</Filter>` now returns false if attr is an empty string (#1665)
+
+- Added 64 bit integer support in expressions and feature ids (#1661,#1662)
+
+- Added support for DBF `Logical` type: #1614
+
+- Added serialization of `line-offset` to save_map (#1562)
+
+- Enabled default input plugin directory and fonts path to be set inherited from environment settings in
+  python bindings to make it easier to run tests locally (#1594). New environment settings are:
+    - MAPNIK_INPUT_PLUGINS_DIRECTORY
+    - MAPNIK_FONT_DIRECTORY
+
+- Added support for controlling rendering behavior of markers on multi-geometries `marker-multi-policy` (#1555,#1573)
+
 - Added alternative PNG/ZLIB implementation (`miniz`) that can be enabled with `e=miniz` (#1554)
 
 - Added support for setting zlib `Z_FIXED` strategy with format string: `png:z=fixed`

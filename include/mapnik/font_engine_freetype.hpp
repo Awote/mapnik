@@ -33,6 +33,7 @@
 #include <mapnik/char_info.hpp>
 #include <mapnik/pixel_position.hpp>
 #include <mapnik/image_compositing.hpp>
+#include <mapnik/noncopyable.hpp>
 
 // freetype2
 extern "C"
@@ -46,7 +47,6 @@ extern "C"
 // boost
 #include <boost/shared_ptr.hpp>
 #include <boost/make_shared.hpp>
-#include <boost/utility.hpp>
 #include <boost/ptr_container/ptr_vector.hpp>
 #include <boost/foreach.hpp>
 #ifdef MAPNIK_THREADSAFE
@@ -57,7 +57,6 @@ extern "C"
 #include <string>
 #include <vector>
 #include <map>
-#include <iostream>
 #include <algorithm>
 
 // uci
@@ -71,7 +70,7 @@ class string_info;
 
 typedef boost::shared_ptr<font_face> face_ptr;
 
-class MAPNIK_DECL font_glyph : private boost::noncopyable
+class MAPNIK_DECL font_glyph : private mapnik::noncopyable
 {
 public:
     font_glyph(face_ptr face, unsigned index)
@@ -93,7 +92,7 @@ private:
 
 typedef boost::shared_ptr<font_glyph> glyph_ptr;
 
-class font_face : boost::noncopyable
+class font_face : mapnik::noncopyable
 {
 public:
     font_face(FT_Face face)
@@ -140,8 +139,6 @@ public:
 
     ~font_face()
     {
-        MAPNIK_LOG_DEBUG(font_engine_freetype) << "font_face: Clean up face \"" << family_name() << " " << style_name() << "\"";
-
         FT_Done_Face(face_);
     }
 
@@ -149,9 +146,12 @@ private:
     FT_Face face_;
 };
 
-class MAPNIK_DECL font_face_set : private boost::noncopyable
+class MAPNIK_DECL font_face_set : private mapnik::noncopyable
 {
 public:
+    typedef std::vector<face_ptr> container_type;
+    typedef container_type::size_type size_type;
+
     font_face_set(void)
         : faces_(),
         dimension_cache_() {}
@@ -162,7 +162,7 @@ public:
         dimension_cache_.clear(); //Make sure we don't use old cached data
     }
 
-    unsigned size() const
+    size_type size() const
     {
         return faces_.size();
     }
@@ -199,12 +199,12 @@ public:
         }
     }
 private:
-    std::vector<face_ptr> faces_;
+    container_type faces_;
     std::map<unsigned, char_info> dimension_cache_;
 };
 
 // FT_Stroker wrapper
-class stroker : boost::noncopyable
+class stroker : mapnik::noncopyable
 {
 public:
     explicit stroker(FT_Stroker s)
@@ -225,8 +225,6 @@ public:
 
     ~stroker()
     {
-        MAPNIK_LOG_DEBUG(font_engine_freetype) << "stroker: Destroy stroker=" << s_;
-
         FT_Stroker_Done(s_);
     }
 private:
@@ -250,7 +248,7 @@ public:
     static bool register_font(std::string const& file_name);
 
     /*! \brief register a font file
-     *  @param file_name - path to a directory containing fonts or subdirectories.
+     *  @param dir - path to a directory containing fonts or subdirectories.
      *  @param recurse - default false, whether to search for fonts in sub directories.
      *  @return bool - true if at least one face was successfully registered.
      */
@@ -270,7 +268,7 @@ private:
 };
 
 template <typename T>
-class MAPNIK_DECL face_manager : private boost::noncopyable
+class MAPNIK_DECL face_manager : private mapnik::noncopyable
 {
     typedef T font_engine_type;
     typedef std::map<std::string,face_ptr> face_ptr_cache_type;
@@ -357,9 +355,9 @@ private:
 };
 
 template <typename T>
-struct text_renderer : private boost::noncopyable
+struct text_renderer : private mapnik::noncopyable
 {
-    struct glyph_t : boost::noncopyable
+    struct glyph_t : mapnik::noncopyable
     {
         FT_Glyph image;
         char_properties *properties;
@@ -372,7 +370,7 @@ struct text_renderer : private boost::noncopyable
     typedef T pixmap_type;
 
     text_renderer (pixmap_type & pixmap,
-                   face_manager<freetype_engine> &font_manager_,
+                   face_manager<freetype_engine> & font_manager,
                    stroker & s,
                    composite_mode_e comp_op = src_over,
                    double scale_factor=1.0);
@@ -422,7 +420,7 @@ private:
     }
 
     pixmap_type & pixmap_;
-    face_manager<freetype_engine> &font_manager_;
+    face_manager<freetype_engine> & font_manager_;
     stroker & stroker_;
     glyphs_t glyphs_;
     composite_mode_e comp_op_;

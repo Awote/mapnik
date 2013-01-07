@@ -27,12 +27,11 @@
 #include <mapnik/markers_placement.hpp>
 #include <mapnik/geometry.hpp>
 #include <mapnik/ctrans.hpp>
+#include <mapnik/debug.hpp>
 #include <mapnik/label_collision_detector.hpp>
 #include <mapnik/global.hpp> //round
 #include <mapnik/box2d.hpp>
-
-// boost
-#include <boost/utility.hpp>
+#include <mapnik/noncopyable.hpp>
 
 // agg
 #include "agg_basics.h"
@@ -48,7 +47,7 @@
 namespace mapnik {
 
 template <typename Locator, typename Detector>
-class markers_placement : boost::noncopyable
+class markers_placement : mapnik::noncopyable
 {
 public:
     /** Constructor for markers_placement object.
@@ -60,19 +59,34 @@ public:
      *                 converted to a positive value with similar magnitude, but
      *                 choosen to optimize marker placement. 0 = no markers
      */
-    markers_placement(Locator &locator, box2d<double> const& size, agg::trans_affine const& tr, Detector &detector, double spacing, double max_error, bool allow_overlap)
+    markers_placement(Locator &locator,
+                      box2d<double> const& size,
+                      agg::trans_affine const& tr,
+                      Detector &detector,
+                      double spacing,
+                      double max_error,
+                      bool allow_overlap)
       : locator_(locator),
         size_(size),
         tr_(tr),
         detector_(detector),
         max_error_(max_error),
-        allow_overlap_(allow_overlap)
+        allow_overlap_(allow_overlap),
+        marker_width_((size_ * tr_).width()),
+        done_(false),
+        last_x(.0),
+        last_y(.0),
+        next_x(.0),
+        next_y(.0),
+        error_(.0),
+        spacing_left_(.0),
+        marker_nr_(0)
     {
-      marker_width_ = (size_ * tr_).width();
       if (spacing >= 0)
       {
           spacing_ = spacing;
-      } else if (spacing < 0)
+      }
+      else if (spacing < 0)
       {
           spacing_ = find_optimal_spacing(-spacing);
       }
@@ -87,7 +101,7 @@ public:
     {
         locator_.rewind(0);
         //Get first point
-        done_ = agg::is_stop(locator_.vertex(&next_x, &next_y)) || spacing_ < marker_width_;
+        done_ = agg::is_stop(locator_.vertex(&next_x, &next_y));
         last_x = next_x;
         last_y = next_y; // Force request of new segment
         error_ = 0;
@@ -223,13 +237,15 @@ private:
     agg::trans_affine tr_;
     Detector &detector_;
     double spacing_;
-    double marker_width_;
     double max_error_;
     bool allow_overlap_;
+    double marker_width_;
 
     bool done_;
-    double last_x, last_y;
-    double next_x, next_y;
+    double last_x;
+    double last_y;
+    double next_x;
+    double next_y;
     /** If a marker could not be placed at the exact point where it should
      * go the next marker's distance will be a bit lower. */
     double error_;
@@ -276,7 +292,7 @@ private:
                 last_y = next_y;
             }
         }
-        unsigned points = round(length / s);
+        unsigned points = static_cast<unsigned>(round(length / s));
         if (points == 0) return 0.0; //Path to short
         return length / points;
     }

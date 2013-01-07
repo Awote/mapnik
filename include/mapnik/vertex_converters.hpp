@@ -44,13 +44,13 @@
 #include <boost/fusion/include/make_vector.hpp>
 
 #include <boost/foreach.hpp>
-#include <boost/utility.hpp>
 #include <boost/array.hpp>
 
 // mapnik
 #include <mapnik/agg_helpers.hpp>
 #include <mapnik/offset_converter.hpp>
 #include <mapnik/simplify_converter.hpp>
+#include <mapnik/noncopyable.hpp>
 
 // agg
 #include "agg_conv_clip_polygon.h"
@@ -317,7 +317,7 @@ struct dispatcher
 
 
 template <typename B, typename R, typename S, typename T, typename P, typename A, typename C >
-struct vertex_converter : private boost::noncopyable
+struct vertex_converter : private mapnik::noncopyable
 {
     typedef C conv_types;
     typedef B bbox_type;
@@ -363,6 +363,16 @@ struct vertex_converter : private boost::noncopyable
         std::size_t index = boost::mpl::distance<iter,end>::value - 1;
         if (index < disp_.vec_.size())
             disp_.vec_[index]=1;
+    }
+
+    template <typename Conv>
+    void unset()
+    {
+        typedef typename boost::mpl::find<conv_types,Conv>::type iter;
+        typedef typename boost::mpl::end<conv_types>::type end;
+        std::size_t index = boost::mpl::distance<iter,end>::value - 1;
+        if (index < disp_.vec_.size())
+            disp_.vec_[index]=0;
     }
 
 

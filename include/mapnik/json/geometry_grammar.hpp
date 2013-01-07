@@ -25,6 +25,7 @@
 
 // mapnik
 #include <mapnik/geometry.hpp>
+#include <mapnik/feature.hpp>
 
 // spirit::qi
 #include <boost/config/warning_disable.hpp>
@@ -32,9 +33,6 @@
 #include <boost/spirit/include/phoenix.hpp>
 #include <boost/variant/apply_visitor.hpp>
 #include <boost/variant/variant.hpp>
-
-// stl
-#include <iostream>
 
 namespace mapnik { namespace json {
 
@@ -72,7 +70,7 @@ struct close_path
     void operator() (T path) const
     {
         BOOST_ASSERT( path!=0 );
-        path->close();
+        path->set_close();
     }
 };
 

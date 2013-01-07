@@ -6,6 +6,9 @@ import time
 from utilities import execution_path
 from subprocess import Popen, PIPE
 import os, mapnik
+from Queue import Queue
+import threading
+
 
 MAPNIK_TEST_DBNAME = 'mapnik-tmp-postgis-test-db'
 POSTGIS_TEMPLATE_DBNAME = 'template_postgis'
@@ -129,6 +132,12 @@ CREATE TABLE test7(gid serial PRIMARY KEY, geom geometry);
 INSERT INTO test7(gid, geom) values (1, GeomFromEWKT('SRID=4326;GEOMETRYCOLLECTION(MULTILINESTRING((10 10,20 20,10 40),(40 40,30 30,40 20,30 10)),LINESTRING EMPTY)'));
 '''
 
+insert_table_8 = '''
+CREATE TABLE test8(gid serial PRIMARY KEY,int_field bigint, geom geometry);
+INSERT INTO test8(gid, int_field, geom) values (1, 2147483648, ST_MakePoint(1,1));
+INSERT INTO test8(gid, int_field, geom) values (2, 922337203685477580, ST_MakePoint(1,1));
+'''
+
 
 def postgis_setup():
     call('dropdb %s' % MAPNIK_TEST_DBNAME,silent=True)
@@ -143,6 +152,7 @@ def postgis_setup():
     call("""psql -q %s -c '%s'""" % (MAPNIK_TEST_DBNAME,insert_table_5b),silent=False)
     call('''psql -q %s -c "%s"''' % (MAPNIK_TEST_DBNAME,insert_table_6),silent=False)
     call('''psql -q %s -c "%s"''' % (MAPNIK_TEST_DBNAME,insert_table_7),silent=False)
+    call('''psql -q %s -c "%s"''' % (MAPNIK_TEST_DBNAME,insert_table_8),silent=False)
 
 def postgis_takedown():
     pass
@@ -443,9 +453,50 @@ if 'postgis' in mapnik.DatasourceCache.plugin_names() \
         fs = ds.featureset()
         eq_(fs.next()['gid'],1)
 
+    def create_ds():
+        ds = mapnik.PostGIS(dbname=MAPNIK_TEST_DBNAME,
+                            table='test',
+                            max_size=20)
+        fs = ds.all_features()
+
+    def test_threaded_create(NUM_THREADS=100):
+        for i in range(NUM_THREADS):
+            t = threading.Thread(target=create_ds)
+            t.start()
+            t.join()
+
+    def create_ds_and_error():
+        try:
+            ds = mapnik.PostGIS(dbname=MAPNIK_TEST_DBNAME,
+                                table='asdfasdfasdfasdfasdf',
+                                max_size=20)
+            fs = ds.all_features()
+        except: pass
+
+    def test_threaded_create2(NUM_THREADS=10):
+        for i in range(NUM_THREADS):
+            t = threading.Thread(target=create_ds_and_error)
+            t.start()
+            t.join()
+
+    def test_that_64bit_int_fields_work():
+        ds = mapnik.PostGIS(dbname=MAPNIK_TEST_DBNAME,
+                            table='test8')
+        eq_(len(ds.fields()),2)
+        eq_(ds.fields(),['gid','int_field'])
+        eq_(ds.field_types(),['int','int'])
+        fs = ds.featureset()
+        feat = fs.next()
+        eq_(feat.id(),1)
+        eq_(feat['gid'],1)
+        eq_(feat['int_field'],2147483648)
+        feat = fs.next()
+        eq_(feat.id(),2)
+        eq_(feat['gid'],2)
+        eq_(feat['int_field'],922337203685477580)
+
     atexit.register(postgis_takedown)
 
 if __name__ == "__main__":
     setup()
-    #test_auto_detection_and_subquery()
     [eval(run)() for run in dir() if 'test_' in run]
