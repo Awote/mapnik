@@ -52,22 +52,22 @@ using mapnik::parameters;
 
 DATASOURCE_PLUGIN(mapniklite_datasource)
 
-mapniklite_datasource::mapniklite_datasource(parameters const& params, bool bind)
-    : datasource(params),
-      extent_(),
-      extent_initialized_(false),
-      type_(datasource::Vector),
-      table_(*params_.get<std::string>("table", "")),
-      fields_(*params_.get<std::string>("fields", "*")),
-      metadata_(*params_.get<std::string>("metadata", "")),
-      geometry_table_(*params_.get<std::string>("geometry_table", "")),
-      geometry_field_(*params_.get<std::string>("geometry_field", "")),
-      index_table_(*params_.get<std::string>("index_table", "")),
-      key_field_(*params_.get<std::string>("key_field", "")),
-      row_offset_(*params_.get<int>("row_offset", 0)),
-      row_limit_(*params_.get<int>("row_limit", 0)),
-      intersects_token_("!intersects!"),
-      desc_(*params_.get<std::string>("type"), *params_.get<std::string>("encoding", "utf-8"))
+mapniklite_datasource::mapniklite_datasource(parameters const& params)
+: datasource(params),
+    extent_(),
+    extent_initialized_(false),
+    type_(datasource::Vector),
+    table_(*params_.get<std::string>("table", "")),
+    fields_(*params_.get<std::string>("fields", "*")),
+    metadata_(*params_.get<std::string>("metadata", "")),
+    geometry_table_(*params_.get<std::string>("geometry_table", "")),
+    geometry_field_(*params_.get<std::string>("geometry_field", "")),
+    index_table_(*params_.get<std::string>("index_table", "")),
+    key_field_(*params_.get<std::string>("key_field", "")),
+  row_offset_(*params_.get<int>("row_offset", 0)),
+    row_limit_(*params_.get<int>("row_limit", 0)),
+    intersects_token_("!intersects!"),
+    desc_(*params_.get<std::string>("type"), *params_.get<std::string>("encoding", "utf-8"))
 {
     /* TODO
        - throw if no primary key but spatial index is present?
@@ -77,19 +77,14 @@ mapniklite_datasource::mapniklite_datasource(parameters const& params, bool bind
 
     boost::optional<std::string> file = params_.get<std::string>("file");
     if (! file) throw datasource_exception("Mapniklite Plugin: missing <file> parameter");
-
-    if (bind)
-    {
-        this->bind();
-    }
+    init();
 }
 
-void mapniklite_datasource::bind() const
+void mapniklite_datasource::init() const
 {
-    if (is_bound_) return;
 
 #ifdef MAPNIK_STATS
-    mapnik::progress_timer __stats__(std::clog, "mapniklite_datasource::bind");
+    mapnik::progress_timer __stats__(std::clog, "mapniklite_datasource::init");
 #endif
 
     boost::optional<std::string> file = params_.get<std::string>("file");
@@ -142,7 +137,7 @@ void mapniklite_datasource::bind() const
     //{
     //    throw datasource_exception("Mapniklite Plugin: failed to load extension");
     //}
-    boost::optional<unsigned> table_by_index = params_.get<unsigned>("table_by_index");
+    boost::optional<mapnik::value_integer> table_by_index = params_.get<mapnik::value_integer>("table_by_index");
 
     int passed_parameters = 0;
     passed_parameters += params_.get<std::string>("table") ? 1 : 0;
@@ -277,7 +272,7 @@ void mapniklite_datasource::bind() const
     if (use_spatial_index_)
     {
 #ifdef MAPNIK_STATS
-        mapnik::progress_timer __stats2__(std::clog, "sqlite_datasource::bind(use_spatial_index)");
+        mapnik::progress_timer __stats2__(std::clog, "mapniklite_datasource::init(use_spatial_index)");
 #endif
 
         if (boost::filesystem::exists(index_db))
@@ -361,8 +356,6 @@ void mapniklite_datasource::bind() const
             throw datasource_exception(s.str());
         }
     }
-
-    is_bound_ = true;
 }
 
 std::string mapniklite_datasource::populate_tokens(std::string const& sql) const
@@ -475,15 +468,11 @@ mapnik::datasource::datasource_t mapniklite_datasource::type() const
 
 box2d<double> mapniklite_datasource::envelope() const
 {
-    if (! is_bound_) bind();
-
     return extent_;
 }
 
 boost::optional<mapnik::datasource::geometry_t> mapniklite_datasource::get_geometry_type() const
 {
-    if (! is_bound_) bind();
-
 #ifdef MAPNIK_STATS
     mapnik::progress_timer __stats__(std::clog, "mapniklite_datasource::get_geometry_type");
 #endif
@@ -535,15 +524,11 @@ boost::optional<mapnik::datasource::geometry_t> mapniklite_datasource::get_geome
 
 layer_descriptor mapniklite_datasource::get_descriptor() const
 {
-    if (! is_bound_) bind();
-
     return desc_;
 }
 
 featureset_ptr mapniklite_datasource::features(query const& q) const
 {
-    if (! is_bound_) bind();
-
 #ifdef MAPNIK_STATS
     mapnik::progress_timer __stats__(std::clog, "mapniklite_datasource::features");
 #endif
@@ -609,11 +594,11 @@ featureset_ptr mapniklite_datasource::features(query const& q) const
         boost::shared_ptr<sqlite_resultset> rs(dataset_->execute_query(s.str()));
 
         return boost::make_shared<mapniklite_featureset>(rs,
-                                                     ctx,
-                                                     desc_.get_encoding(),
-                                                     e,
-                                                     has_spatial_index_,
-                                                     using_subquery_);
+                                                         ctx,
+                                                         desc_.get_encoding(),
+                                                         e,
+                                                         has_spatial_index_,
+                                                         using_subquery_);
     }
 
     return featureset_ptr();
@@ -621,8 +606,6 @@ featureset_ptr mapniklite_datasource::features(query const& q) const
 
 featureset_ptr mapniklite_datasource::features_at_point(coord2d const& pt, double tol) const
 {
-    if (! is_bound_) bind();
-
 #ifdef MAPNIK_STATS
     mapnik::progress_timer __stats__(std::clog, "mapniklite_datasource::features_at_point");
 #endif
@@ -692,11 +675,11 @@ featureset_ptr mapniklite_datasource::features_at_point(coord2d const& pt, doubl
         boost::shared_ptr<sqlite_resultset> rs(dataset_->execute_query(s.str()));
 
         return boost::make_shared<mapniklite_featureset>(rs,
-                                                     ctx,
-                                                     desc_.get_encoding(),
-                                                     e,
-                                                     has_spatial_index_,
-                                                     using_subquery_);
+                                                         ctx,
+                                                         desc_.get_encoding(),
+                                                         e,
+                                                         has_spatial_index_,
+                                                         using_subquery_);
     }
 
     return featureset_ptr();

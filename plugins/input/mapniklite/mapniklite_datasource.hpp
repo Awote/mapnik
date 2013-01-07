@@ -48,7 +48,7 @@
 class mapniklite_datasource : public mapnik::datasource
 {
 public:
-    mapniklite_datasource(mapnik::parameters const& params, bool bind = true);
+    mapniklite_datasource(mapnik::parameters const& params);
     virtual ~mapniklite_datasource ();
     datasource::datasource_t type() const;
     static const char * name();
@@ -57,7 +57,7 @@ public:
     mapnik::box2d<double> envelope() const;
     boost::optional<mapnik::datasource::geometry_t> get_geometry_type() const;
     mapnik::layer_descriptor get_descriptor() const;
-    void bind() const;
+    void init() const;
 
 private:
     // Fill init_statements with any statements
